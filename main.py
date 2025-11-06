@@ -143,20 +143,6 @@ def calcHammingDist(a, b, n):
     return dist
 
 
-"""
-# Вывод
-print("Шаг\t | x_i" + " " * (N - 3) + " | " + "d(x_i-1,x_i)")
-for i in range(len(history)):
-    print(str(i) + "\t |", end=" ")
-    for j in history[i]:
-        print(j, end="")
-    if i > 0:
-        print(" |\t", end=" ")
-        print(calcHammingDist(history[i - 1], history[i], N))
-    else:
-        print(" |")
-"""
-
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainWindow()
