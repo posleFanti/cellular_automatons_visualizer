@@ -1,4 +1,5 @@
 import numpy as np
+import math
 import matplotlib.pyplot as plt
 import sys
 from PyQt6.QtWidgets import (
@@ -12,20 +13,22 @@ from PyQt6.QtWidgets import (
     QFormLayout,
     QLabel,
     QLineEdit,
+    QTextEdit,
+    QSizePolicy,
 )
 from PyQt6.QtCore import Qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 
-# TODO: добавить расстояния, анализ
+# TODO: добавить случайное начальное положение, стандартные значения в QLineEdit
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Визуализация одномерных КА")
-        self.setGeometry(100, 100, 1000, 600)
+        self.setGeometry(100, 100, 1200, 750)
 
         # Создаём центральный виджет и layout
         central_widget = QWidget()
@@ -38,7 +41,9 @@ class MainWindow(QMainWindow):
         # Создаём Matplotlib Figure
         self.fig = Figure()
         self.canvas = FigureCanvas(self.fig)
-        left_layout.addWidget(self.canvas, stretch=3)
+        self.canvas.setMinimumWidth(500)
+        left_layout.addWidget(self.canvas, stretch=2)
+        left_layout.setStretchFactor(left_layout, 2)
 
         # Панель инструментов
         self.toolbar = NavigationToolbar(self.canvas, self)
@@ -50,10 +55,15 @@ class MainWindow(QMainWindow):
         form_widget = QWidget()
         form_layout = QFormLayout(form_widget)
         form_layout.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
+        form_layout.setRowWrapPolicy(QFormLayout.RowWrapPolicy.DontWrapRows)
+        form_layout.setFieldGrowthPolicy(
+            QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow
+        )
+        form_widget.setMaximumWidth(400)
 
         self.rule_input = QLineEdit()
         self.N_input = QLineEdit()
-        self.x0_input = QLineEdit()
+        self.x0_input = QTextEdit()
         self.gens_input = QLineEdit()
         self.grid_check_box = QCheckBox()
 
@@ -67,21 +77,30 @@ class MainWindow(QMainWindow):
         form_layout.addRow(self.button)
         self.button.clicked.connect(self.updatePlot)
 
-        layout.addWidget(form_widget, stretch=1)
+        for widget in [self.rule_input, self.N_input, self.x0_input, self.gens_input]:
+            widget.setMinimumWidth(150)
+
+        self.x0_input.setMaximumHeight(60)
+
+        layout.addWidget(form_widget)
 
     def updatePlot(self):
         try:
             self.getStartParams()
             self.history = self.calcHistory(self.x0)
-            self.plot()
+            self.plot_CA()
+            self.plot_hamming_dist()
+            self.plot_density()
+            self.plot_entropy()
+            self.canvas.draw()
         except Exception as e:
             print(e)
 
-    def plot(self):
+    def plot_CA(self):
         self.fig.clear()
-        ax = self.fig.add_subplot(111)
+        ax = self.fig.add_subplot(221)
         ax.matshow(np.array(self.history), cmap="binary", aspect="equal", zorder=1)
-        ax.set_title("Одномерный клеточный автомат")
+        ax.set_title("Визуализация ЭКА")
         ax.set_xlabel("Индекс клетки")
         ax.set_ylabel("Шаг")
         ax.set_xticks(np.arange(-0.5, self.N, 1), minor=True)
@@ -91,7 +110,30 @@ class MainWindow(QMainWindow):
                 which="minor", color="black", linestyle="-", linewidth=0.5, zorder=0
             )
         self.fig.tight_layout()
-        self.canvas.draw()
+
+    def plot_hamming_dist(self):
+        ax = self.fig.add_subplot(222)
+        dists = []
+        for i in range(len(self.history) - 1):
+            dists.append(calcHammingDist(self.history[i], self.history[i + 1], self.N))
+        ax.set_title("Расстояние Хэмминга")
+        ax.plot(dists)
+
+    def plot_density(self):
+        ax = self.fig.add_subplot(223)
+        densities = []
+        for x in self.history:
+            densities.append(calc_density(x))
+        ax.set_title("Плотность")
+        ax.plot(densities)
+
+    def plot_entropy(self):
+        ax = self.fig.add_subplot(224)
+        entropies = []
+        for x in self.history:
+            entropies.append(calc_entropy(x))
+        ax.set_title("Энтропия Шеннона")
+        ax.plot(entropies)
 
     def calcHistory(self, arr):
         history = []
@@ -116,7 +158,7 @@ class MainWindow(QMainWindow):
 
         self.N = int(self.N_input.text())
 
-        input_vec = self.x0_input.text()
+        input_vec = self.x0_input.toPlainText()
         if len(input_vec) != self.N:
             raise ValueError("Длина вектора x_0 != N")
         self.x0 = [int(j) for j in input_vec]
@@ -141,6 +183,18 @@ def calcHammingDist(a, b, n):
     for i in range(n):
         dist += (a[i] - b[i]) % 2
     return dist
+
+
+def calc_density(a):
+    dens = 0
+    for i in a:
+        dens += i
+    return dens / len(a)
+
+
+def calc_entropy(a):
+    r = calc_density(a)
+    return r * math.log2(r) - (1 - r) * math.log2(1 - r)
 
 
 if __name__ == "__main__":
