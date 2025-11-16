@@ -1,12 +1,16 @@
+from matplotlib.backend_bases import button_press_handler
 import numpy as np
 import math
+import random as rnd
 import matplotlib.pyplot as plt
 import sys
 from PyQt6.QtWidgets import (
     QApplication,
+    QButtonGroup,
     QCheckBox,
     QMainWindow,
     QHBoxLayout,
+    QRadioButton,
     QVBoxLayout,
     QWidget,
     QPushButton,
@@ -65,16 +69,30 @@ class MainWindow(QMainWindow):
         self.N_input = QLineEdit()
         self.x0_input = QTextEdit()
         self.gens_input = QLineEdit()
-        self.grid_check_box = QCheckBox()
+        self.grid_cb = QCheckBox("Сетка")
+        self.button_group = QButtonGroup()
+        self.custom_x_rb = QRadioButton("Задать свое начальное положение")
+        self.random_x_rb = QRadioButton("Случайное начальное положение")
+        self.one_x_rb = QRadioButton("Начальное положение с единицей на N/2")
+        self.button = QPushButton("Обновить график")
+
+        self.custom_x_rb.setChecked(True)
 
         form_layout.addRow(QLabel("Правило КА:"), self.rule_input)
         form_layout.addRow(QLabel("N (длина):"), self.N_input)
         form_layout.addRow(QLabel("x_0 (длина N):"), self.x0_input)
         form_layout.addRow(QLabel("Число итераций:"), self.gens_input)
 
-        self.button = QPushButton("Обновить график")
-        form_layout.addRow(self.grid_check_box, QLabel("Сетка"))
+        form_layout.addRow(self.grid_cb)
+        form_layout.addRow(self.custom_x_rb)
+        form_layout.addRow(self.random_x_rb)
+        form_layout.addRow(self.one_x_rb)
         form_layout.addRow(self.button)
+
+        self.button_group.addButton(self.custom_x_rb)
+        self.button_group.addButton(self.random_x_rb)
+        self.button_group.addButton(self.one_x_rb)
+
         self.button.clicked.connect(self.updatePlot)
 
         for widget in [self.rule_input, self.N_input, self.x0_input, self.gens_input]:
@@ -86,18 +104,19 @@ class MainWindow(QMainWindow):
 
     def updatePlot(self):
         try:
+            self.fig.clear()
             self.getStartParams()
             self.history = self.calcHistory(self.x0)
             self.plot_CA()
             self.plot_hamming_dist()
             self.plot_density()
             self.plot_entropy()
+            self.fig.tight_layout()
             self.canvas.draw()
         except Exception as e:
             print(e)
 
     def plot_CA(self):
-        self.fig.clear()
         ax = self.fig.add_subplot(221)
         ax.matshow(np.array(self.history), cmap="binary", aspect="equal", zorder=1)
         ax.set_title("Визуализация ЭКА")
@@ -105,11 +124,10 @@ class MainWindow(QMainWindow):
         ax.set_ylabel("Шаг")
         ax.set_xticks(np.arange(-0.5, self.N, 1), minor=True)
         ax.set_yticks(np.arange(-0.5, self.gens, 1), minor=True)
-        if self.grid_check_box.isChecked():
+        if self.grid_cb.isChecked():
             ax.grid(
                 which="minor", color="black", linestyle="-", linewidth=0.5, zorder=0
             )
-        self.fig.tight_layout()
 
     def plot_hamming_dist(self):
         ax = self.fig.add_subplot(222)
@@ -158,13 +176,23 @@ class MainWindow(QMainWindow):
 
         self.N = int(self.N_input.text())
 
-        input_vec = self.x0_input.toPlainText()
-        if len(input_vec) != self.N:
-            raise ValueError("Длина вектора x_0 != N")
-        self.x0 = [int(j) for j in input_vec]
-        checkBinary(self.x0)
+        if self.custom_x_rb.isChecked():
+            input_vec = self.x0_input.toPlainText()
+            if len(input_vec) != self.N:
+                raise ValueError("Длина вектора x_0 != N")
+            self.x0 = [int(j) for j in input_vec]
+            checkBinary(self.x0)
+        elif self.one_x_rb.isChecked():
+            self.x0 = self.set_arr_with_one()
+        else:
+            self.x0 = [rnd.randint(0, 1) for _ in range(self.N)]
 
         self.gens = int(self.gens_input.text())
+
+    def set_arr_with_one(self):
+        arr = [0] * self.N
+        arr[self.N // 2] = 1
+        return arr
 
 
 def moveCA(p, q, r, v):
@@ -194,7 +222,7 @@ def calc_density(a):
 
 def calc_entropy(a):
     r = calc_density(a)
-    return r * math.log2(r) - (1 - r) * math.log2(1 - r)
+    return r * math.log2(r) - (1 - r) * math.log2(1 - r) if 0 < r < 1 else 0
 
 
 if __name__ == "__main__":
