@@ -25,8 +25,6 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 
-# TODO: добавить случайное начальное положение, стандартные значения в QLineEdit
-
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -65,16 +63,19 @@ class MainWindow(QMainWindow):
         )
         form_widget.setMaximumWidth(400)
 
-        self.rule_input = QLineEdit()
-        self.N_input = QLineEdit()
-        self.x0_input = QTextEdit()
-        self.gens_input = QLineEdit()
+        self.rule_input = QLineEdit("10010110")
+        self.N_input = QLineEdit("11")
+        self.x0_input = QTextEdit("00000100000")
+        self.gens_input = QLineEdit("11")
         self.grid_cb = QCheckBox("Сетка")
         self.button_group = QButtonGroup()
         self.custom_x_rb = QRadioButton("Задать свое начальное положение")
         self.random_x_rb = QRadioButton("Случайное начальное положение")
         self.one_x_rb = QRadioButton("Начальное положение с единицей на N/2")
+        self.lambda_line = QLabel("λ-параметр: ")
         self.button = QPushButton("Обновить график")
+
+        self.lambda_line.setMaximumHeight(20)
 
         self.custom_x_rb.setChecked(True)
 
@@ -87,6 +88,7 @@ class MainWindow(QMainWindow):
         form_layout.addRow(self.custom_x_rb)
         form_layout.addRow(self.random_x_rb)
         form_layout.addRow(self.one_x_rb)
+        form_layout.addRow(self.lambda_line)
         form_layout.addRow(self.button)
 
         self.button_group.addButton(self.custom_x_rb)
@@ -188,6 +190,7 @@ class MainWindow(QMainWindow):
             self.x0 = [rnd.randint(0, 1) for _ in range(self.N)]
 
         self.gens = int(self.gens_input.text())
+        self.lambda_line.setText(f"λ-параметр: {str(calc_density(self.rule))}")
 
     def set_arr_with_one(self):
         arr = [0] * self.N
@@ -222,7 +225,7 @@ def calc_density(a):
 
 def calc_entropy(a):
     r = calc_density(a)
-    return r * math.log2(r) - (1 - r) * math.log2(1 - r) if 0 < r < 1 else 0
+    return -r * math.log2(r) - (1 - r) * math.log2(1 - r) if 0 < r < 1 else 0
 
 
 if __name__ == "__main__":
