@@ -121,7 +121,7 @@ class MainWindow(QMainWindow):
     def plot_CA(self):
         ax = self.fig.add_subplot(221)
         ax.matshow(np.array(self.history), cmap="binary", aspect="equal", zorder=1)
-        ax.set_title("Визуализация ЭКА")
+        ax.set_title(f"Визуализация ЭКА (Правило: {self.calc_rule_num()})")
         ax.set_xlabel("Индекс клетки")
         ax.set_ylabel("Шаг")
         ax.set_xticks(np.arange(-0.5, self.N, 1), minor=True)
@@ -196,6 +196,12 @@ class MainWindow(QMainWindow):
         arr = [0] * self.N
         arr[self.N // 2] = 1
         return arr
+
+    def calc_rule_num(self):
+        rule_num = 0
+        for i in range(8):
+            rule_num += self.rule[i] * 2**i
+        return rule_num
 
 
 def moveCA(p, q, r, v):
