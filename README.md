@@ -12,3 +12,6 @@ User input:
 
 In source directory type in terminal:
 `uv run python3 main.py`
+
+Screenshot of app window:
+![Alt text](/mainwindow.png?raw=true "Main window")
